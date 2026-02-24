@@ -4,7 +4,7 @@ import { ChangeEvent, DragEvent, useMemo, useState } from "react";
 
 type ParsedTrack = {
   title: string;
-  performer: string;
+  performer?: string;
   startAt: string;
 };
 
@@ -18,7 +18,7 @@ const FORMAT_OPTIONS: FormatOption[] = [
   {
     id: "start-title-performer",
     label: "Start + Title + Performer",
-    template: "{start_at} {track_title} {performer}",
+    template: "{start_at} {track_title} by {performer}",
   },
   {
     id: "start-performer-title",
@@ -118,7 +118,9 @@ function formatSeconds(totalSeconds: number): string {
   const minutes = Math.floor((safeSeconds % 3600) / 60);
   const seconds = safeSeconds % 60;
 
-  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
 }
 
 function parseOffsetToSeconds(offset: string): number | null {
@@ -142,10 +144,20 @@ function parseOffsetToSeconds(offset: string): number | null {
 }
 
 function renderTemplate(track: ParsedTrack, template: string): string {
-  return template
+  const rendered = template
     .replaceAll("{start_at}", track.startAt)
     .replaceAll("{track_title}", track.title)
-    .replaceAll("{performer}", track.performer);
+    .replaceAll("{performer}", track.performer ?? "");
+
+  if (template.includes(",")) {
+    return rendered.trim();
+  }
+
+  return rendered
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+-\s*$/g, "")
+    .replace(/\(\s*\)/g, "")
+    .trim();
 }
 
 export default function Home() {
@@ -156,7 +168,10 @@ export default function Home() {
   const [selectedFormat, setSelectedFormat] = useState("start-title-performer");
 
   const parsedTracks = useMemo(() => parseCue(cueText), [cueText]);
-  const offsetSeconds = useMemo(() => parseOffsetToSeconds(offsetInput), [offsetInput]);
+  const offsetSeconds = useMemo(
+    () => parseOffsetToSeconds(offsetInput),
+    [offsetInput],
+  );
 
   const adjustedTracks = useMemo(() => {
     if (offsetSeconds === null) {
@@ -168,20 +183,29 @@ export default function Home() {
       return {
         ...track,
         startAt:
-          originalSeconds === null ? track.startAt : formatSeconds(originalSeconds + offsetSeconds),
+          originalSeconds === null
+            ? track.startAt
+            : formatSeconds(originalSeconds + offsetSeconds),
       };
     });
   }, [parsedTracks, offsetSeconds]);
 
   const formattedByFormat = useMemo(() => {
-    return FORMAT_OPTIONS.filter((option) => option.id === selectedFormat).map((option) => ({
-      ...option,
-      output: adjustedTracks.map((track) => renderTemplate(track, option.template)).join("\n"),
-    }));
+    return FORMAT_OPTIONS.filter((option) => option.id === selectedFormat).map(
+      (option) => ({
+        ...option,
+        output: adjustedTracks
+          .map((track) => renderTemplate(track, option.template))
+          .join("\n"),
+      }),
+    );
   }, [adjustedTracks, selectedFormat]);
 
   const combinedExportOutput = useMemo(
-    () => formattedByFormat.map((section) => `${section.label}\n${section.output}`).join("\n\n"),
+    () =>
+      formattedByFormat
+        .map((section) => `${section.label}\n${section.output}`)
+        .join("\n\n"),
     [formattedByFormat],
   );
 
@@ -239,7 +263,9 @@ export default function Home() {
       <main className="mx-auto grid w-full max-w-7xl gap-6 md:grid-cols-[7fr_3fr]">
         <section className="space-y-6">
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight">Cue File Formatter</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Cue File Formatter
+            </h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Paste or drop a rekordbox .cue file, then export selected formats.
             </p>
@@ -259,10 +285,17 @@ export default function Home() {
             }`}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">Drop .cue file here or paste below</p>
+              <p className="text-sm font-medium">
+                Drop .cue file here or paste below
+              </p>
               <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
                 Choose file
-                <input type="file" accept=".cue" className="hidden" onChange={handleFileInput} />
+                <input
+                  type="file"
+                  accept=".cue"
+                  className="hidden"
+                  onChange={handleFileInput}
+                />
               </label>
             </div>
             <textarea
@@ -271,7 +304,9 @@ export default function Home() {
               value={cueText}
               onChange={handleTextChange}
             />
-            {errorMessage ? <p className="mt-2 text-sm text-red-600">{errorMessage}</p> : null}
+            {errorMessage ? (
+              <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
+            ) : null}
           </div>
 
           <div className="rounded-xl border border-zinc-300 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
@@ -295,8 +330,8 @@ export default function Home() {
                     role="tooltip"
                     className="pointer-events-none absolute left-0 top-full z-10 mt-2 w-72 rounded-md bg-zinc-900 px-3 py-2 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-zinc-100 dark:text-zinc-900"
                   >
-                    Shift all parsed start times by this amount. Use seconds (+5, -2) or time
-                    (+00:30, -00:01:10).
+                    Shift all parsed start times by this amount. Use seconds
+                    (+5, -2) or time (+00:30, -00:01:10).
                   </span>
                 </div>
                 <input
@@ -320,7 +355,8 @@ export default function Home() {
 
             {offsetSeconds === null ? (
               <pre className="min-h-28 whitespace-pre-wrap rounded-md bg-zinc-100 p-3 font-mono text-sm dark:bg-zinc-800">
-                Invalid offset. Use seconds (e.g. +5, -2) or time (e.g. +00:30, -00:01:10).
+                Invalid offset. Use seconds (e.g. +5, -2) or time (e.g. +00:30,
+                -00:01:10).
               </pre>
             ) : (
               <div className="space-y-4">
@@ -362,7 +398,9 @@ export default function Home() {
                   className="mt-0.5 h-4 w-4"
                 />
                 <span className="space-y-1">
-                  <span className="block text-sm font-medium">{option.label}</span>
+                  <span className="block text-sm font-medium">
+                    {option.label}
+                  </span>
                   <code className="block text-xs text-zinc-500 dark:text-zinc-400">
                     {option.template}
                   </code>
@@ -370,7 +408,9 @@ export default function Home() {
               </label>
             ))}
           </div>
-          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">One format stays selected.</p>
+          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+            One format stays selected.
+          </p>
         </aside>
       </main>
     </div>
