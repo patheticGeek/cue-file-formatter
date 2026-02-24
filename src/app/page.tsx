@@ -1,7 +1,7 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useEffect, useMemo, useState } from "react";
 import FaqSection from "@/components/faq-section";
+import { ChangeEvent, DragEvent, useEffect, useMemo, useState } from "react";
 
 type ParsedTrack = {
   title: string;
@@ -50,11 +50,20 @@ const FORMAT_OPTIONS: FormatOption[] = [
 
 const TOKEN_OPTIONS: TokenOption[] = [
   { token: "{start}", description: "Track start time (HH:MM:SS)" },
-  { token: "{start_seconds}", description: "Track start time as total seconds" },
+  {
+    token: "{start_seconds}",
+    description: "Track start time as total seconds",
+  },
   { token: "{title}", description: "Track title" },
-  { token: "{artist}", description: "Track performer/artist (track-level only)" },
+  {
+    token: "{artist}",
+    description: "Track performer/artist (track-level only)",
+  },
   { token: "{track_no}", description: "Track number (1, 2, 3...)" },
-  { token: "{track_no_padded}", description: "Track number padded (01, 02, 03...)" },
+  {
+    token: "{track_no_padded}",
+    description: "Track number padded (01, 02, 03...)",
+  },
 ];
 
 const TRACK_HEADER = /^\s*TRACK\s+\d+\s+AUDIO\s*$/i;
@@ -163,7 +172,11 @@ function parseOffsetToSeconds(offset: string): number | null {
   return sign * parsedTime;
 }
 
-function renderTemplate(track: ParsedTrack, template: string, trackIndex: number): string {
+function renderTemplate(
+  track: ParsedTrack,
+  template: string,
+  trackIndex: number,
+): string {
   const startSeconds = parseTimeToSeconds(track.startAt);
   const replacements: Record<string, string> = {
     // Preferred tokens
@@ -179,9 +192,12 @@ function renderTemplate(track: ParsedTrack, template: string, trackIndex: number
     performer: track.performer ?? "",
   };
 
-  const rendered = template.replace(/\{([a-z_]+)\}/g, (match, token: string) => {
-    return Object.hasOwn(replacements, token) ? replacements[token] : match;
-  });
+  const rendered = template.replace(
+    /\{([a-z_]+)\}/g,
+    (match, token: string) => {
+      return Object.hasOwn(replacements, token) ? replacements[token] : match;
+    },
+  );
 
   if (template.includes(",")) {
     return rendered.trim();
@@ -201,7 +217,8 @@ export default function Home() {
   const [offsetInput, setOffsetInput] = useState("");
   const [selectedFormat, setSelectedFormat] = useState("start-title-performer");
   const [customFormat, setCustomFormat] = useState("{start} {title}");
-  const [debouncedCustomFormat, setDebouncedCustomFormat] = useState(customFormat);
+  const [debouncedCustomFormat, setDebouncedCustomFormat] =
+    useState(customFormat);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -238,7 +255,8 @@ export default function Home() {
     return FORMAT_OPTIONS.filter((option) => option.id === selectedFormat).map(
       (option) => ({
         ...option,
-        template: option.id === "custom" ? debouncedCustomFormat : option.template,
+        template:
+          option.id === "custom" ? debouncedCustomFormat : option.template,
         output: adjustedTracks
           .map((track, index) =>
             renderTemplate(
@@ -252,11 +270,8 @@ export default function Home() {
     );
   }, [adjustedTracks, debouncedCustomFormat, selectedFormat]);
 
-  const combinedExportOutput = useMemo(
-    () =>
-      formattedByFormat
-        .map((section) => `${section.label}\n${section.output}`)
-        .join("\n\n"),
+  const selectedFormatOutputText = useMemo(
+    () => formattedByFormat[0]?.output ?? "",
     [formattedByFormat],
   );
 
@@ -298,11 +313,12 @@ export default function Home() {
     event.target.value = "";
   };
 
-  const copyOutput = async () => {
-    if (!combinedExportOutput) {
+  const handleCopyClick = async () => {
+    if (!selectedFormatOutputText) {
       return;
     }
-    await navigator.clipboard.writeText(combinedExportOutput);
+    await navigator.clipboard.writeText(selectedFormatOutputText);
+    window.alert("Copied!");
   };
 
   const selectFormat = (formatId: string) => {
@@ -395,11 +411,11 @@ export default function Home() {
                 />
                 <button
                   type="button"
-                  onClick={copyOutput}
-                  disabled={!combinedExportOutput}
+                  onClick={handleCopyClick}
+                  disabled={!selectedFormatOutputText}
                   className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
                 >
-                  Copy all
+                  Copy
                 </button>
               </div>
             </div>
