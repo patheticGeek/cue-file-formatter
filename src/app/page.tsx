@@ -47,7 +47,6 @@ function parseCue(cueText: string): ParsedTrack[] {
   const lines = cueText.replace(/\r\n/g, "\n").split("\n");
 
   let currentTrack: Partial<ParsedTrack> | null = null;
-  let defaultPerformer = "";
 
   const pushCurrentTrack = () => {
     if (!currentTrack?.title || !currentTrack.startAt) {
@@ -57,7 +56,7 @@ function parseCue(cueText: string): ParsedTrack[] {
     tracks.push({
       title: currentTrack.title,
       startAt: currentTrack.startAt,
-      performer: currentTrack.performer || defaultPerformer || "Unknown Artist",
+      performer: currentTrack.performer || "",
     });
   };
 
@@ -69,11 +68,7 @@ function parseCue(cueText: string): ParsedTrack[] {
     }
 
     const performerMatch = line.match(PERFORMER_LINE);
-
     if (!currentTrack) {
-      if (performerMatch) {
-        defaultPerformer = performerMatch[1];
-      }
       continue;
     }
 
