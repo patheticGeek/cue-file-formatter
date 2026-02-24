@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -56,6 +57,10 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col">
           <div className="flex-1">{children}</div>
           <footer className="mx-auto mt-4 flex w-full max-w-7xl items-center justify-center gap-4 px-4 pb-6 text-sm text-zinc-600 dark:text-zinc-400">
+            <Link href="/about" className="underline-offset-2 hover:underline">
+              About
+            </Link>
+            <span aria-hidden="true">•</span>
             <div>
               <span>Made by </span>
               <a

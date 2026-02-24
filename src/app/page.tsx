@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, DragEvent, useMemo, useState } from "react";
+import FaqSection from "@/components/faq-section";
 
 type ParsedTrack = {
   title: string;
@@ -413,6 +414,9 @@ export default function Home() {
           </p>
         </aside>
       </main>
+      <div className="mx-auto mt-6 w-full max-w-7xl p-6">
+        <FaqSection variant="plain" />
+      </div>
     </div>
   );
 }
