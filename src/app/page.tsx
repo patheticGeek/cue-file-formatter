@@ -15,27 +15,46 @@ type FormatOption = {
   template: string;
 };
 
+type TokenOption = {
+  token: string;
+  description: string;
+};
+
 const FORMAT_OPTIONS: FormatOption[] = [
   {
     id: "start-title-performer",
     label: "Start + Title + Performer",
-    template: "{start_at} {track_title} by {performer}",
+    template: "{start} {title} by {artist}",
   },
   {
     id: "start-performer-title",
     label: "Start + Performer + Title",
-    template: "{start_at} {performer} - {track_title}",
+    template: "{start} {artist} - {title}",
   },
   {
     id: "title-performer-start",
     label: "Title + Performer + Start",
-    template: "{track_title} - {performer} ({start_at})",
+    template: "{title} - {artist} ({start})",
   },
   {
     id: "csv",
     label: "CSV",
-    template: "{start_at},{track_title},{performer}",
+    template: "{track_no},{start},{title},{artist}",
   },
+  {
+    id: "custom",
+    label: "Custom",
+    template: "{start} {title}",
+  },
+];
+
+const TOKEN_OPTIONS: TokenOption[] = [
+  { token: "{start}", description: "Track start time (HH:MM:SS)" },
+  { token: "{start_seconds}", description: "Track start time as total seconds" },
+  { token: "{title}", description: "Track title" },
+  { token: "{artist}", description: "Track performer/artist (track-level only)" },
+  { token: "{track_no}", description: "Track number (1, 2, 3...)" },
+  { token: "{track_no_padded}", description: "Track number padded (01, 02, 03...)" },
 ];
 
 const TRACK_HEADER = /^\s*TRACK\s+\d+\s+AUDIO\s*$/i;
@@ -144,11 +163,25 @@ function parseOffsetToSeconds(offset: string): number | null {
   return sign * parsedTime;
 }
 
-function renderTemplate(track: ParsedTrack, template: string): string {
-  const rendered = template
-    .replaceAll("{start_at}", track.startAt)
-    .replaceAll("{track_title}", track.title)
-    .replaceAll("{performer}", track.performer ?? "");
+function renderTemplate(track: ParsedTrack, template: string, trackIndex: number): string {
+  const startSeconds = parseTimeToSeconds(track.startAt);
+  const replacements: Record<string, string> = {
+    // Preferred tokens
+    start: track.startAt,
+    start_seconds: startSeconds === null ? "" : String(startSeconds),
+    title: track.title,
+    artist: track.performer ?? "",
+    track_no: String(trackIndex + 1),
+    track_no_padded: String(trackIndex + 1).padStart(2, "0"),
+    // Backward-compatible aliases
+    start_at: track.startAt,
+    track_title: track.title,
+    performer: track.performer ?? "",
+  };
+
+  const rendered = template.replace(/\{([a-z_]+)\}/g, (match, token: string) => {
+    return Object.hasOwn(replacements, token) ? replacements[token] : match;
+  });
 
   if (template.includes(",")) {
     return rendered.trim();
@@ -167,6 +200,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
   const [offsetInput, setOffsetInput] = useState("");
   const [selectedFormat, setSelectedFormat] = useState("start-title-performer");
+  const [customFormat, setCustomFormat] = useState("{start} {title}");
 
   const parsedTracks = useMemo(() => parseCue(cueText), [cueText]);
   const offsetSeconds = useMemo(
@@ -195,12 +229,19 @@ export default function Home() {
     return FORMAT_OPTIONS.filter((option) => option.id === selectedFormat).map(
       (option) => ({
         ...option,
+        template: option.id === "custom" ? customFormat : option.template,
         output: adjustedTracks
-          .map((track) => renderTemplate(track, option.template))
+          .map((track, index) =>
+            renderTemplate(
+              track,
+              option.id === "custom" ? customFormat : option.template,
+              index,
+            ),
+          )
           .join("\n"),
       }),
     );
-  }, [adjustedTracks, selectedFormat]);
+  }, [adjustedTracks, customFormat, selectedFormat]);
 
   const combinedExportOutput = useMemo(
     () =>
@@ -380,7 +421,7 @@ export default function Home() {
           </div>
         </section>
 
-        <aside className="h-fit rounded-xl border border-zinc-300 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <aside className="h-fit rounded-xl border border-zinc-300 bg-white p-6 md:sticky md:top-4 md:mt-20 dark:border-zinc-700 dark:bg-zinc-900">
           <h2 className="text-lg font-semibold">Export Formats</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Select one output format.
@@ -409,6 +450,37 @@ export default function Home() {
               </label>
             ))}
           </div>
+
+          {selectedFormat === "custom" ? (
+            <div className="mt-4 space-y-2">
+              <label htmlFor="custom-format" className="text-sm font-medium">
+                Custom format
+              </label>
+              <input
+                id="custom-format"
+                type="text"
+                value={customFormat}
+                onChange={(event) => setCustomFormat(event.target.value)}
+                placeholder="{start} {title}"
+                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none ring-blue-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
+              />
+            </div>
+          ) : null}
+
+          <div className="mt-5">
+            <h3 className="text-sm font-medium">Available tokens</h3>
+            <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+              {TOKEN_OPTIONS.map((token) => (
+                <li key={token.token}>
+                  <code className="mr-1 text-zinc-700 dark:text-zinc-300">
+                    {token.token}
+                  </code>
+                  {token.description}
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
             One format stays selected.
           </p>
