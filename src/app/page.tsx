@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useMemo, useState } from "react";
 import FaqSection from "@/components/faq-section";
 
 type ParsedTrack = {
@@ -201,6 +201,15 @@ export default function Home() {
   const [offsetInput, setOffsetInput] = useState("");
   const [selectedFormat, setSelectedFormat] = useState("start-title-performer");
   const [customFormat, setCustomFormat] = useState("{start} {title}");
+  const [debouncedCustomFormat, setDebouncedCustomFormat] = useState(customFormat);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedCustomFormat(customFormat);
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [customFormat]);
 
   const parsedTracks = useMemo(() => parseCue(cueText), [cueText]);
   const offsetSeconds = useMemo(
@@ -229,19 +238,19 @@ export default function Home() {
     return FORMAT_OPTIONS.filter((option) => option.id === selectedFormat).map(
       (option) => ({
         ...option,
-        template: option.id === "custom" ? customFormat : option.template,
+        template: option.id === "custom" ? debouncedCustomFormat : option.template,
         output: adjustedTracks
           .map((track, index) =>
             renderTemplate(
               track,
-              option.id === "custom" ? customFormat : option.template,
+              option.id === "custom" ? debouncedCustomFormat : option.template,
               index,
             ),
           )
           .join("\n"),
       }),
     );
-  }, [adjustedTracks, customFormat, selectedFormat]);
+  }, [adjustedTracks, debouncedCustomFormat, selectedFormat]);
 
   const combinedExportOutput = useMemo(
     () =>
