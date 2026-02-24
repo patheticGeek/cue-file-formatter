@@ -325,10 +325,73 @@ export default function Home() {
     setSelectedFormat(formatId);
   };
 
+  const renderExportFormatsPanel = (panelId: string, className: string) => (
+    <aside className={className}>
+      <h2 className="text-lg font-semibold">Export Formats</h2>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        Select one output format.
+      </p>
+      <div className="mt-4 space-y-3">
+        {FORMAT_OPTIONS.map((option) => (
+          <label
+            key={`${panelId}-${option.id}`}
+            className="flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/40"
+          >
+            <input
+              type="radio"
+              name={`export-format-${panelId}`}
+              checked={selectedFormat === option.id}
+              onChange={() => selectFormat(option.id)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span className="space-y-1">
+              <span className="block text-sm font-medium">{option.label}</span>
+              <code className="block text-xs text-zinc-500 dark:text-zinc-400">
+                {option.template}
+              </code>
+            </span>
+          </label>
+        ))}
+      </div>
+
+      {selectedFormat === "custom" ? (
+        <div className="mt-4 space-y-2">
+          <label htmlFor={`${panelId}-custom-format`} className="text-sm font-medium">
+            Custom format
+          </label>
+          <input
+            id={`${panelId}-custom-format`}
+            type="text"
+            value={customFormat}
+            onChange={(event) => setCustomFormat(event.target.value)}
+            placeholder="{start} {title}"
+            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none ring-blue-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
+          />
+        </div>
+      ) : null}
+
+      <div className="mt-5">
+        <h3 className="text-sm font-medium">Available tokens</h3>
+        <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+          {TOKEN_OPTIONS.map((token) => (
+            <li key={`${panelId}-${token.token}`}>
+              <code className="mr-1 text-zinc-700 dark:text-zinc-300">{token.token}</code>
+              {token.description}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        One format stays selected.
+      </p>
+    </aside>
+  );
+
   return (
-    <div className="min-h-screen bg-zinc-50 px-4 py-10 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto grid w-full max-w-7xl gap-6 md:grid-cols-[7fr_3fr]">
-        <section className="space-y-6">
+    <div className="min-h-screen bg-zinc-50 px-3 py-6 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 sm:px-4 sm:py-10">
+      <main className="mx-auto grid w-full max-w-7xl gap-4 md:grid-cols-[7fr_3fr] md:gap-6">
+        <section className="space-y-4 sm:space-y-6">
           <div className="space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight">
               Cue File Formatter
@@ -345,17 +408,17 @@ export default function Home() {
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`rounded-xl border-2 border-dashed p-6 transition-colors ${
+            className={`rounded-xl border-2 border-dashed p-4 transition-colors sm:p-6 ${
               isDragging
                 ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
                 : "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900"
             }`}
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
               <p className="text-sm font-medium">
                 Drop .cue file here or paste below
               </p>
-              <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+              <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-center text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800 sm:text-left">
                 Choose file
                 <input
                   type="file"
@@ -375,11 +438,15 @@ export default function Home() {
               <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
             ) : null}
           </div>
+          {renderExportFormatsPanel(
+            "mobile",
+            "h-fit rounded-xl border border-zinc-300 bg-white p-4 md:hidden dark:border-zinc-700 dark:bg-zinc-900 sm:p-6",
+          )}
 
-          <div className="rounded-xl border border-zinc-300 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-xl border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 sm:p-6">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Formatted Output</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                 <div className="group relative">
                   <label
                     htmlFor="offset-input"
@@ -407,13 +474,13 @@ export default function Home() {
                   value={offsetInput}
                   onChange={(event) => setOffsetInput(event.target.value)}
                   placeholder="+5, -3, +00:30"
-                  className="w-36 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
+                  className="min-w-[9rem] flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2 sm:w-36 sm:flex-none dark:border-zinc-700 dark:bg-zinc-950"
                 />
                 <button
                   type="button"
                   onClick={handleCopyClick}
                   disabled={!selectedFormatOutputText}
-                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                  className="w-full rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900"
                 >
                   Copy
                 </button>
@@ -432,7 +499,7 @@ export default function Home() {
                     <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
                       {section.label}
                     </p>
-                    <pre className="min-h-20 whitespace-pre-wrap rounded-md bg-zinc-100 p-3 font-mono text-sm dark:bg-zinc-800">
+                    <pre className="min-h-20 overflow-x-auto whitespace-pre-wrap rounded-md bg-zinc-100 p-3 font-mono text-sm dark:bg-zinc-800">
                       {section.output || "No tracks parsed yet."}
                     </pre>
                   </div>
@@ -445,73 +512,12 @@ export default function Home() {
             </p>
           </div>
         </section>
-
-        <aside className="h-fit rounded-xl border border-zinc-300 bg-white p-6 md:sticky md:top-4 md:mt-20 dark:border-zinc-700 dark:bg-zinc-900">
-          <h2 className="text-lg font-semibold">Export Formats</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Select one output format.
-          </p>
-          <div className="mt-4 space-y-3">
-            {FORMAT_OPTIONS.map((option) => (
-              <label
-                key={option.id}
-                className="flex cursor-pointer items-start gap-2 rounded-md border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/40"
-              >
-                <input
-                  type="radio"
-                  name="export-format"
-                  checked={selectedFormat === option.id}
-                  onChange={() => selectFormat(option.id)}
-                  className="mt-0.5 h-4 w-4"
-                />
-                <span className="space-y-1">
-                  <span className="block text-sm font-medium">
-                    {option.label}
-                  </span>
-                  <code className="block text-xs text-zinc-500 dark:text-zinc-400">
-                    {option.template}
-                  </code>
-                </span>
-              </label>
-            ))}
-          </div>
-
-          {selectedFormat === "custom" ? (
-            <div className="mt-4 space-y-2">
-              <label htmlFor="custom-format" className="text-sm font-medium">
-                Custom format
-              </label>
-              <input
-                id="custom-format"
-                type="text"
-                value={customFormat}
-                onChange={(event) => setCustomFormat(event.target.value)}
-                placeholder="{start} {title}"
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none ring-blue-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
-              />
-            </div>
-          ) : null}
-
-          <div className="mt-5">
-            <h3 className="text-sm font-medium">Available tokens</h3>
-            <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-              {TOKEN_OPTIONS.map((token) => (
-                <li key={token.token}>
-                  <code className="mr-1 text-zinc-700 dark:text-zinc-300">
-                    {token.token}
-                  </code>
-                  {token.description}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-            One format stays selected.
-          </p>
-        </aside>
+        {renderExportFormatsPanel(
+          "desktop",
+          "hidden h-fit rounded-xl border border-zinc-300 bg-white p-4 md:sticky md:top-4 md:mt-20 md:block dark:border-zinc-700 dark:bg-zinc-900 sm:p-6",
+        )}
       </main>
-      <div className="mx-auto mt-6 w-full max-w-7xl p-6">
+      <div className="mx-auto mt-6 w-full max-w-7xl p-4 sm:p-6">
         <FaqSection variant="plain" />
       </div>
     </div>
