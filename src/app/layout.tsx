@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   description:
     "Format rekordbox .cue files into clean tracklists. Paste or drop a cue file, apply time offsets, and export in multiple output formats.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
   keywords: [
     "cue file formatter",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/seo-banner.svg",
+        url: "/seo-banner.png",
         width: 1200,
         height: 630,
         alt: "Cue File Formatter banner",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     title: "Cue File Formatter",
     description:
       "Convert rekordbox .cue files into clean tracklists with configurable output formats and time offsets.",
-    images: ["/seo-banner.svg"],
+    images: ["/seo-banner.png"],
   },
   robots: {
     index: true,
