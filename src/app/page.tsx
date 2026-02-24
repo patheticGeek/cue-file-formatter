@@ -71,20 +71,83 @@ function parseCue(cueText: string): ParsedTrack[] {
   return tracks;
 }
 
+function parseTimeToSeconds(timecode: string): number | null {
+  const parts = timecode.split(":").map((part) => Number(part));
+  if (parts.some((part) => Number.isNaN(part))) {
+    return null;
+  }
+
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts;
+    return minutes * 60 + seconds;
+  }
+
+  return null;
+}
+
+function formatSeconds(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
+}
+
+function parseOffsetToSeconds(offset: string): number | null {
+  const trimmed = offset.trim();
+  if (!trimmed) {
+    return 0;
+  }
+
+  if (/^[+-]?\d+$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+
+  const sign = trimmed.startsWith("-") ? -1 : 1;
+  const unsignedOffset = trimmed.replace(/^[+-]/, "");
+  const parsedTime = parseTimeToSeconds(unsignedOffset);
+  if (parsedTime === null) {
+    return null;
+  }
+  return sign * parsedTime;
+}
+
 export default function Home() {
   const [cueText, setCueText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [offsetInput, setOffsetInput] = useState("");
 
   const parsedTracks = useMemo(() => parseCue(cueText), [cueText]);
-
-  const formattedOutput = useMemo(
-    () =>
-      parsedTracks
-        .map((track) => `${track.startAt} ${track.title} ${track.performer}`)
-        .join("\n"),
-    [parsedTracks],
+  const offsetSeconds = useMemo(
+    () => parseOffsetToSeconds(offsetInput),
+    [offsetInput],
   );
+
+  const formattedOutput = useMemo(() => {
+    if (offsetSeconds === null) {
+      return "";
+    }
+
+    return parsedTracks
+      .map((track) => {
+        const originalSeconds = parseTimeToSeconds(track.startAt);
+        const adjustedStartAt =
+          originalSeconds === null
+            ? track.startAt
+            : formatSeconds(originalSeconds + offsetSeconds);
+        return `${adjustedStartAt} ${track.title} ${track.performer}`;
+      })
+      .join("\n");
+  }, [parsedTracks, offsetSeconds]);
 
   const handleTextChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setCueText(event.target.value);
@@ -133,7 +196,9 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-50 px-4 py-10 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Cue File Formatter</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Cue File Formatter
+          </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Paste or drop a rekordbox .cue file to format each track as:
             <span className="ml-1 rounded bg-zinc-200 px-1 py-0.5 font-mono text-xs dark:bg-zinc-800">
@@ -156,10 +221,17 @@ export default function Home() {
           }`}
         >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">Drop .cue file here or paste below</p>
+            <p className="text-sm font-medium">
+              Drop .cue file here or paste below
+            </p>
             <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
               Choose file
-              <input type="file" accept=".cue" className="hidden" onChange={handleFileInput} />
+              <input
+                type="file"
+                accept=".cue"
+                className="hidden"
+                onChange={handleFileInput}
+              />
             </label>
           </div>
           <textarea
@@ -168,23 +240,58 @@ export default function Home() {
             value={cueText}
             onChange={handleTextChange}
           />
-          {errorMessage ? <p className="mt-2 text-sm text-red-600">{errorMessage}</p> : null}
+          {errorMessage ? (
+            <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
+          ) : null}
         </div>
 
         <div className="rounded-xl border border-zinc-300 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Formatted Output</h2>
-            <button
-              type="button"
-              onClick={copyOutput}
-              disabled={!formattedOutput}
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Copy
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="group relative">
+                <label
+                  htmlFor="offset-input"
+                  className="inline-flex cursor-help items-center gap-1 text-sm text-zinc-600 dark:text-zinc-300"
+                >
+                  Offset
+                  <span
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-300"
+                    aria-hidden="true"
+                  >
+                    ?
+                  </span>
+                </label>
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute left-0 top-full z-10 mt-2 w-72 rounded-md bg-zinc-900 px-3 py-2 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-zinc-100 dark:text-zinc-900"
+                >
+                  Shift all parsed start times by this amount. Use seconds (+5,
+                  -2) or time (+00:30, -00:01:10).
+                </span>
+              </div>
+              <input
+                id="offset-input"
+                type="text"
+                value={offsetInput}
+                onChange={(event) => setOffsetInput(event.target.value)}
+                placeholder="+5, -3, +00:30"
+                className="w-36 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
+              />
+              <button
+                type="button"
+                onClick={copyOutput}
+                disabled={!formattedOutput}
+                className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+              >
+                Copy
+              </button>
+            </div>
           </div>
           <pre className="min-h-28 whitespace-pre-wrap rounded-md bg-zinc-100 p-3 font-mono text-sm dark:bg-zinc-800">
-            {formattedOutput || "No tracks parsed yet."}
+            {offsetSeconds === null
+              ? "Invalid offset. Use seconds (e.g. +5, -2) or time (e.g. +00:30, -00:01:10)."
+              : formattedOutput || "No tracks parsed yet."}
           </pre>
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
             Parsed tracks: {parsedTracks.length}
